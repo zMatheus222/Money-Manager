@@ -6,20 +6,22 @@
     "dev": "vue-cli-service serve",
     "build:vue": "vue-cli-service build",
     "build:electron": "tsc -p Electron/tsconfig.electron.json",
-    "build:backend": "cd backend && npm run build",
-    "build": "npm run build:vue && npm run build:backend && npm run build:electron",
-    "start:backend": "node backend/build/main.js",
+    "build": "npm run build:vue && npm run build:electron",
     "start:electron": "electron ./Electron/build/electron.js",
-    "start": "npm run build && concurrently \"npm run start:backend\" \"npm run start:electron\""
+    "start": "npm run build && concurrently \"npm run start:electron\"",
+    "postinstall": "npm rebuild better-sqlite3 --runtime=electron --target=$(npx electron --version) --dist-url=https://electronjs.org/headers"
   },
   "dependencies": {
     "pinia": "^2.2.4",
     "vue": "^3.2.13"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.17",
     "@vue/cli-plugin-typescript": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
     "axios": "^1.7.9",
+    "better-sqlite3": "^11.7.0",
     "concurrently": "^9.1.2",
     "electron": "^33.2.1",
     "ts-node": "^10.9.2",

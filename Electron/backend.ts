@@ -86,6 +86,16 @@ export function startBackend(port: number) {
 
             console.log(`[/receive_data] itens a serem atualizados: receivedData: `, receivedData);
             
+            // Converter is_recurring para 1 ou 0
+            const convertIsRecurring = (item: any) => {
+                item.is_recurring = item.is_recurring ? 1 : 0;
+            };
+
+            // Aplicar a conversão em rendas, economias e gastos
+            for (const item of receivedData.rendas) convertIsRecurring(item);
+            for (const item of receivedData.economias) convertIsRecurring(item);
+            for (const item of receivedData.gastos) convertIsRecurring(item);
+            
             db.exec('BEGIN TRANSACTION');
 
             // Caso tenha itens a remover, fazer primeiro

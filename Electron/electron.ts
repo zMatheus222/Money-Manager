@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { startBackend } from '../backend/src/backend';
+import { startBackend } from './backend';
 
 // Para processar JSON do corpo das requisições
 

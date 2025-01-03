@@ -36,7 +36,7 @@
         id: undefined,
         nome: '',
         valor: 0,
-        is_recurring: false,
+        is_recurring: 0,
         date_start: new Date(),
         date_end: null,
     });
@@ -45,7 +45,7 @@
         id: undefined,
         nome: '',
         valor: 0,
-        is_recurring: false,
+        is_recurring: 0,
         date_start: new Date(),
         date_end: null,
     });
@@ -56,7 +56,7 @@
         descricao: '',
         economia_id: undefined,
         valor: 0,
-        is_recurring: false,
+        is_recurring: 0,
         date_start: new Date(),
         date_end: null,
     });
@@ -130,7 +130,7 @@
                 })),
             }
 
-            if (DataToSend.rendas.length === 0 && DataToSend.economias.length === 0 && DataToSend.gastos.length === 0) {
+            if (DataToSend.rendas.length === 0 && DataToSend.economias.length === 0 && DataToSend.gastos.length === 0 && DataToSend.to_remove.length === 0) {
                 console.warn('[SendToDatabase] Nenhum dado novo para enviar.');
                 return;
             } else {
@@ -177,7 +177,7 @@
         const newRenda = { ...renda.value, id: generateId() };
         rendas.value.push(newRenda);
         console.log('Added new renda:', newRenda);
-        renda.value = { id: undefined, nome: '', valor: 0, is_recurring: false, date_start: new Date(), date_end: null };
+        renda.value = { id: undefined, nome: '', valor: 0, is_recurring: 0, date_start: new Date(), date_end: null };
         menus.value.set('adicionar_renda', false);
     };
 
@@ -185,7 +185,7 @@
         const newEconomia = { ...economia.value, id: generateId() };
         economias.value.push(newEconomia);
         console.log('Added new economia:', newEconomia);
-        economia.value = { id: undefined, nome: '', valor: 0, is_recurring: false, date_start: new Date(), date_end: null };
+        economia.value = { id: undefined, nome: '', valor: 0, is_recurring: 0, date_start: new Date(), date_end: null };
         menus.value.set('adicionar_economia', false);
     };
 
@@ -193,7 +193,7 @@
         const newGasto = { ...gasto.value, id: generateId() };
         gastos.value.push(newGasto);
         console.log('Added new gasto:', newGasto);
-        gasto.value = { id: undefined, nome: '', descricao: '', economia_id: undefined, valor: 0, is_recurring: false, date_start: new Date(), date_end: null };
+        gasto.value = { id: undefined, nome: '', descricao: '', economia_id: undefined, valor: 0, is_recurring: 0, date_start: new Date(), date_end: null };
         menus.value.set('adicionar_gasto', false);
     };
     
@@ -280,7 +280,7 @@
                 
                 if (isYearMonthBeforeOrEqual(gastoStartDate, ActualDate) && 
                     (!gastoEndDate || isYearMonthBeforeOrEqual(ActualDate, gastoEndDate))) {
-                    if (gasto.is_recurring) {
+                    if (gasto.is_recurring == 1) {
                         console.log(`\tSomando gasto recorrente: ${gasto.nome} ao mes: ${mes}`);
                         gastoDoMes = roundToTwo(gastoDoMes + gastoValor);
                     } else if (isSameYearAndMonth(gastoStartDate, ActualDate)) {
@@ -306,7 +306,7 @@
                 // Usa isYearMonthBeforeOrEqual para verificar se: a) A economia já começou (sua data de início é anterior ou igual ao mês atual). 
                 // b) Se houver data de fim, verifica se o mês atual não - é posterior à data de fim.
                 if (isYearMonthBeforeOrEqual(economiaStartDate, ActualDate) && (!economiaEndDate || isYearMonthBeforeOrEqual(ActualDate, economiaEndDate))) {
-                    if (economia.is_recurring) {                                    // Se a economia é recorrente e passou na verificação principal, ela é incluída no cálculo.
+                    if (economia.is_recurring == 1) {                                    // Se a economia é recorrente e passou na verificação principal, ela é incluída no cálculo.
                         console.log(`\tSomando economia recorrente: ${economia.nome} ao mes: ${mes}`);
                         economiaDoMes = roundToTwo(economiaDoMes + economiaValor);
                     } else if (isSameYearAndMonth(economiaStartDate, ActualDate)) { // Usa isSameYearAndMonth para verificar se a economia não - recorrente ocorre exatamente no mês atual do for.
@@ -387,7 +387,7 @@
                         <div @click="removeItem('renda', item.id ?? 'invalid id')" class="remove-button">X</div>
                     </div>
                     <div class="item-details">
-                        <span>Recorrente: {{ item.is_recurring ? 'Sim - ' : 'Não - ' }}</span>
+                        <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
                         <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
                         <span v-if="item.date_end">Fim: {{ new Date(item.date_end).toLocaleDateString() }}</span>
                     </div>
@@ -401,7 +401,7 @@
                 <input v-model="renda.nome" placeholder="Nome" required>
                 <input v-model.number="renda.valor" type="number" step="0.01" placeholder="Valor" required>
                 <div class="checkbox-group">
-                    <input v-model="renda.is_recurring" type="checkbox" id="renda-recurring">
+                    <input v-model.number="renda.is_recurring" type="checkbox" id="renda-recurring">
                     <label for="renda-recurring">Recorrente</label>
                 </div>
                 <input v-model="renda.date_start" type="date" required>
@@ -426,7 +426,7 @@
                     </div>
                     <div class="item-details">
                         <!-- <span v-if="item.id">ID: {{ item.id }}</span> -->
-                        <span>Recorrente: {{ item.is_recurring ? 'Sim - ' : 'Não - ' }}</span>
+                        <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
                         <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
                         <span v-if="item.date_end">Fim: {{ new Date(item.date_end).toLocaleDateString() }}</span>
                     </div>
@@ -440,7 +440,7 @@
                 <input v-model="economia.nome" placeholder="Nome" required>
                 <input v-model.number="economia.valor" type="number" step="0.01" placeholder="Valor" required>
                 <div class="checkbox-group">
-                    <input v-model="economia.is_recurring" type="checkbox" id="economia-recurring">
+                    <input v-model.number="economia.is_recurring" type="checkbox" id="economia-recurring">
                     <label for="economia-recurring">Recorrente</label>
                 </div>
                 <input v-model="economia.date_start" type="date" required>
@@ -464,7 +464,7 @@
                         <div @click="removeItem('gasto', item.id ?? 'invalid id')" class="remove-button">X</div>
                     </div>
                     <div class="item-details">
-                        <span>Recorrente: {{ item.is_recurring ? 'Sim - ' : 'Não - ' }}</span>
+                        <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
                         <span v-if="item.descricao">Descrição: {{ item.descricao }}</span>
                         <span v-if="item.economia_id">Economia ID: {{ item.economia_id }}</span>
                         <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
@@ -487,7 +487,7 @@
                 </select>
                 <input v-model.number="gasto.valor" type="number" step="0.01" placeholder="Valor" required>
                 <div class="checkbox-group">
-                    <input v-model="gasto.is_recurring" type="checkbox" id="gasto-recurring">
+                    <input v-model.number="gasto.is_recurring" type="checkbox" id="gasto-recurring">
                     <label for="gasto-recurring">Recorrente</label>
                 </div>
                 <input v-model="gasto.date_start" type="date" required>

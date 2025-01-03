@@ -1,15 +1,14 @@
 {
     "compilerOptions": {
-      "target": "ES6",
-      "module": "CommonJS",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "moduleResolution": "node",
-      "outDir": "./build"  // Coloca a saída do JavaScript na pasta dist
+        "target": "ES6",
+        "module": "CommonJS",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "moduleResolution": "node",
+        "outDir": "./build"  // Coloca a saída do JavaScript na pasta dist
     },
     "include": [
-      "electron.ts"  // Incluir apenas o arquivo electron.ts
+        "electron.ts"  // Incluir apenas o arquivo electron.ts
     ]
-  }
-  
+}

@@ -2,7 +2,7 @@ export interface Renda {
     id: string | undefined,
     nome: string,
     valor: number,
-    is_recurring: boolean,
+    is_recurring: number,
     date_start: Date,
     date_end: Date | null
 }
@@ -11,7 +11,7 @@ export interface Economia {
     id: string | undefined,
     nome: string,
     valor: number,
-    is_recurring: boolean,
+    is_recurring: number,
     date_start: Date,
     date_end: Date | null
 }
@@ -22,7 +22,7 @@ export interface Gasto {
     descricao: string,
     economia_id?: number,
     valor: number
-    is_recurring: boolean,
+    is_recurring: number,
     date_start: Date,
     date_end: Date | null
 }

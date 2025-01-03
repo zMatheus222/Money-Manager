@@ -31,4 +31,10 @@ export interface ReceivedData {
     rendas: Renda[];
     economias: Economia[];
     gastos: Gasto[];
+    to_remove: ToRemoveItem[];
+}
+
+export interface ToRemoveItem {
+    key: string;
+    value: 'RENDAS' | 'ECONOMIAS' | 'GASTOS';
 }

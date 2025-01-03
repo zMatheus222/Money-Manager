@@ -4,13 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "vue-cli-service serve",
-    "build:vue": "vue-cli-service build",
+    "build": "vue-cli-service build",
     "build:electron": "tsc -p Electron/tsconfig.electron.json",
-    "build:backend": "cd backend && npm run build",
-    "build": "npm run build:vue && npm run build:backend && npm run build:electron",
-    "start:backend": "node backend/build/main.js",
-    "start:electron": "electron ./Electron/build/electron.js",
-    "start": "npm run build && concurrently \"npm run start:backend\" \"npm run start:electron\""
+    "start": "npm run build:electron && electron ./Electron/build/electron.js"
   },
   "dependencies": {
     "pinia": "^2.2.4",
@@ -20,8 +16,8 @@
     "@vue/cli-plugin-typescript": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
     "axios": "^1.7.9",
-    "concurrently": "^9.1.2",
     "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref } from 'vue';
+    import { computed, ref } from 'vue';
     import type { Renda, Economia, Gasto, ReceivedData } from '@/assets/plugins/classes';
     import { backend } from '@/assets/plugins/backend';
 
@@ -60,10 +60,59 @@
         date_start: new Date(),
         date_end: null,
     });
-    
-    const rendas = ref<Renda[]>(baseStore.Rendas);
-    const economias = ref<Economia[]>(baseStore.Economias);
-    const gastos = ref<Gasto[]>(baseStore.Gastos);
+
+    const Projecao = ref<Map<string, number>>(new Map());
+    const rendas = computed<Renda[]>(() => baseStore.Rendas);
+    const economias = computed<Economia[]>(() => baseStore.Economias);
+    const gastos = computed<Gasto[]>(() => baseStore.Gastos);
+
+    // mapa que contem o 'tipo_item' 'id', exemplo: <'id'>: 'rendas'
+    const ToRemoveItens = ref<Map<string, string>>(new Map());
+
+    function CopyDataToClipboard() {
+        const data = {
+            rendas: rendas.value.map((renda) => ({
+                ...renda,
+                date_start: renda.date_start instanceof Date ? renda.date_start.toISOString() : new Date(renda.date_start).toISOString(),
+                date_end: renda.date_end
+                    ? renda.date_end instanceof Date
+                    ? renda.date_end.toISOString()
+                    : new Date(renda.date_end).toISOString()
+                    : null,
+            })),
+            economias: economias.value.map((economia) => ({
+                ...economia,
+                date_start: economia.date_start instanceof Date ? economia.date_start.toISOString() : new Date(economia.date_start).toISOString(),
+                date_end: economia.date_end
+                    ? economia.date_end instanceof Date
+                    ? economia.date_end.toISOString()
+                    : new Date(economia.date_end).toISOString()
+                    : null,
+            })),
+            gastos: gastos.value.map((gasto) => ({
+                ...gasto,
+                date_start: gasto.date_start instanceof Date ? gasto.date_start.toISOString() : new Date(gasto.date_start).toISOString(),
+                date_end: gasto.date_end
+                    ? gasto.date_end instanceof Date
+                    ? gasto.date_end.toISOString()
+                    : new Date(gasto.date_end).toISOString()
+                    : null,
+            })),
+            projecao: Object.fromEntries(Projecao.value) // Convertendo o Map para um objeto serializável
+        };
+
+        // Converter para JSON formatado
+        const jsonData = JSON.stringify(data, null, 2);
+
+        // Copiar para o clipboard
+        navigator.clipboard.writeText(jsonData).then(() => {
+            console.log('Dados copiados para o clipboard!');
+            alert('Dados copiados para o clipboard!');
+        }).catch((err) => {
+            console.error('Erro ao copiar dados para o clipboard:', err);
+            alert('Erro ao copiar dados para o clipboard.');
+        });
+    }
 
     async function SendToDatabase() {
 
@@ -74,7 +123,11 @@
             const DataToSend: ReceivedData = {
                 rendas: rendas.value,
                 economias: economias.value,
-                gastos: gastos.value
+                gastos: gastos.value,
+                to_remove: Array.from(ToRemoveItens.value, ([key, value]) => ({
+                    key,
+                    value: value as 'RENDAS' | 'ECONOMIAS' | 'GASTOS',
+                })),
             }
 
             if (DataToSend.rendas.length === 0 && DataToSend.economias.length === 0 && DataToSend.gastos.length === 0) {
@@ -87,6 +140,7 @@
             const res = await backend.post('/receive_data', DataToSend, { headers: { 'Content-Type': 'application/json' } });
             if (res.status === 200) {
                 console.log(`[SendToDatabase] Dados enviados e inseridos com sucesso`);
+                ToRemoveItens.value.clear();
                 await Promise.all([baseStore.fetchData("Rendas"), baseStore.fetchData("Economias"), baseStore.fetchData("Gastos")]);
             } else {
                 console.error(`Erro ao receber / inserir os dados`);
@@ -99,6 +153,25 @@
         }
 
     }
+
+    function removeItem(tipo: 'renda' | 'economia' | 'gasto', item_id: string) {
+
+        console.log(`[removeItem] Removendo item do tipo ${tipo} id: ${item_id}`);
+
+        if (tipo === 'renda') {
+            baseStore.Rendas = baseStore.Rendas.filter(item => item.id != item_id);
+        } else if (tipo === 'economia') {
+            baseStore.Economias = baseStore.Economias.filter(item => item.id != item_id);
+        } else if (tipo === 'gasto') {
+            baseStore.Gastos = baseStore.Gastos.filter(item => item.id != item_id);
+        } else {
+            console.error(`[removeItem] Erro ao tentar excluir um item tipo: ${tipo} | id: ${item_id}`);
+            return;
+        }
+
+        ToRemoveItens.value.set(item_id, tipo === 'renda' ? 'RENDAS' : tipo === 'economia' ? 'ECONOMIAS' : tipo === 'gasto' ? 'GASTOS' : 'UNDEFINED TABLE');
+
+    };
 
     const addRenda = () => {
         const newRenda = { ...renda.value, id: generateId() };
@@ -127,8 +200,10 @@
     async function PickMesesAno(startDate: Date): Promise<Date[]> {
         let MesesAno: Date[] = [];
         
-        for (let i = 1; i <= 12; i++) {
-            const nextMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+        for (let i = 0; i <= 12; i++) {
+            const nextMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 2);
+            console.log('adding nextMonth: ', nextMonth);
+            //MesesAno.push(new Date(startDate.getFullYear(), startDate.getMonth(), 1));
             MesesAno.push(nextMonth);
         }
 
@@ -136,9 +211,6 @@
         
         return MesesAno;
     }
-    
-    const Projecao = ref<Map<string, number>>(new Map());
-
 
     /*
         Estas funções são úteis para comparar datas ignorando o dia específico, focando apenas no ano e mês. Isso é especialmente importante para lidar com gastos e economias recorrentes e não - recorrentes em cálculos financeiros mensais.
@@ -191,8 +263,12 @@
         
         for (const ActualDate of nextTwelveDates) {
 
+            // ano
+            const ano = ActualDate.getFullYear();
+
             // nome do mes
             const mes = ActualDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+
 
             console.log(`Mês atual: ${mes}`);
 
@@ -233,9 +309,11 @@
                     if (economia.is_recurring) {                                    // Se a economia é recorrente e passou na verificação principal, ela é incluída no cálculo.
                         console.log(`\tSomando economia recorrente: ${economia.nome} ao mes: ${mes}`);
                         economiaDoMes = roundToTwo(economiaDoMes + economiaValor);
-                    } else if (isSameYearAndMonth(economiaStartDate, ActualDate)) { // Usa isSameYearAndMonth para verificar se a economia não - recorrente ocorre exatamente no mês atual.
+                    } else if (isSameYearAndMonth(economiaStartDate, ActualDate)) { // Usa isSameYearAndMonth para verificar se a economia não - recorrente ocorre exatamente no mês atual do for.
                         console.log(`\tSomando economia não - recorrente: ${economia.nome} ao mes: ${mes}`);
                         economiaDoMes = roundToTwo(economiaDoMes + economiaValor);
+                    } else {
+                        console.warn(`if not match on isYearMonthBeforeOrEqual economiaStartDate: ${economiaStartDate.getMonth() + ' - ' + economiaStartDate.getFullYear()} | ActualDate: ${ActualDate.getMonth() + ' ' + ActualDate.getFullYear()}`, isSameYearAndMonth(economiaStartDate, ActualDate));
                     }
                 } else {
                     console.warn(`\tSkippando economia: ${economia.nome} ao mes: ${mes} :: economiaStartDate: ${economiaStartDate.toISOString().substr(0, 7)} || ActualDate: ${ActualDate.toISOString().substr(0, 7)}`);
@@ -243,7 +321,7 @@
             }
 
             console.log(`[ProjecaoMensal] Gasto total do mês ${mes}: ${gastoDoMes} | Economia do mes: ${economiaDoMes}`);
-            Projecao.value.set(mes, TotalRenda - roundToTwo(gastoDoMes) - economiaDoMes);
+            Projecao.value.set(mes + '_' + ano, TotalRenda - roundToTwo(gastoDoMes) - economiaDoMes);
             
         }
     }
@@ -279,7 +357,8 @@
 
         <div class="button-group">
             <button class="action-button update" @click="ProjecaoMensal()">Atualizar Projeção 📈</button>
-            <button class="action-button save" @click="SendToDatabase()">Salvar Dados 💾</button>
+            <button class="action-button save" @click="SendToDatabase()">Salvar Alterações 💾</button>
+            <button class="action-button copy" @click="CopyDataToClipboard()">Copiar Dados 📋</button>
         </div>
 
         <div class="projection-section">
@@ -287,10 +366,8 @@
             <div v-if="Projecao.size > 0" class="projection-grid">
                 <div v-for="[mes, value] in Projecao" :key="mes" class="projection-card">
                     <div class="month-indicator" :class="getIndicatorClass(value)"></div>
-                    <div class="month-name">{{ capitalizeFirstLetter(mes) }}</div>
-                    <div class="projection-value" :class="getValueClass(value)">
-                        R$ {{ value.toFixed(2) }}
-                    </div>
+                    <div class="month-name">{{ capitalizeFirstLetter(mes).split('_')[0] }} - {{ capitalizeFirstLetter(mes).split('_')[1] }}</div>
+                    <div class="projection-value" :class="getValueClass(value)">R$ {{ value.toFixed(2) }}</div>
                 </div>
             </div>
         </div>
@@ -307,6 +384,7 @@
                     <div class="item-header">
                         <span class="item-name">{{ item.nome }}</span>
                         <span class="item-value">R$ {{ Number(item.valor).toFixed(2) }}</span>
+                        <div @click="removeItem('renda', item.id ?? 'invalid id')" class="remove-button">X</div>
                     </div>
                     <div class="item-details">
                         <span>Recorrente: {{ item.is_recurring ? 'Sim - ' : 'Não - ' }}</span>
@@ -344,6 +422,7 @@
                     <div class="item-header">
                         <span class="item-name">{{ item.nome }}</span>
                         <span class="item-value economia-value">R$ {{ Number(item.valor).toFixed(2) }}</span>
+                        <div @click="removeItem('economia', item.id ?? 'invalid id')" class="remove-button">X</div>
                     </div>
                     <div class="item-details">
                         <!-- <span v-if="item.id">ID: {{ item.id }}</span> -->
@@ -382,6 +461,7 @@
                     <div class="item-header">
                         <span class="item-name">{{ item.nome }}</span>
                         <span class="item-value gasto-value">R$ {{ Number(item.valor).toFixed(2) }}</span>
+                        <div @click="removeItem('gasto', item.id ?? 'invalid id')" class="remove-button">X</div>
                     </div>
                     <div class="item-details">
                         <span>Recorrente: {{ item.is_recurring ? 'Sim - ' : 'Não - ' }}</span>
@@ -455,6 +535,10 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.action-button.copy {
+    background-color: lightskyblue;
+}
+
 .action-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
@@ -463,6 +547,18 @@
 .update {
     background-color: #4CAF50;
     color: white;
+}
+
+.remove-button:hover {
+    opacity: 0.8;
+    cursor: pointer;
+}
+
+.remove-button {
+    background-color: #F44336;
+    padding: 10px;
+    border-radius: 15px;
+    font-weight: bolder;
 }
 
 .save {

@@ -1,7 +1,8 @@
 {
   "name": "money-manager",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "main": "./Electron/build/electron.js",
   "scripts": {
     "dev": "vue-cli-service serve",
     "build:vue": "vue-cli-service build",
@@ -9,11 +10,15 @@
     "build": "npm run build:vue && npm run build:electron",
     "start:electron": "electron ./Electron/build/electron.js",
     "start": "npm run build && concurrently \"npm run start:electron\"",
-    "postinstall": "npm rebuild better-sqlite3 --runtime=electron --target=$(npx electron --version) --dist-url=https://electronjs.org/headers"
+    "postinstall": "npm rebuild better-sqlite3 --runtime=electron --target=$(npx electron --version) --dist-url=https://electronjs.org/headers",
+    "dist": "electron-builder"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "pinia": "^2.2.4",
-    "vue": "^3.2.13"
+    "vue": "^3.2.13",
+    "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
@@ -24,8 +29,17 @@
     "better-sqlite3": "^11.7.0",
     "concurrently": "^9.1.2",
     "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
+  },
+  "build": {
+    "asar": false,
+    "appId": "money-manager-v0",
+    "productName": "Money Manager",
+    "win": {
+      "target": "nsis"
+    }
   },
   "browserslist": [
     "> 1%",

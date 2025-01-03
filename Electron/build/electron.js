@@ -16,15 +16,22 @@ function createWindow() {
             nodeIntegration: true
         }
     });
+    mainWindow.webContents.openDevTools(); // Abre as DevTools imediatamente
+    console.log('Environment:', process.env.NODE_ENV);
     // Carregar o frontend do Vue (a partir da pasta dist)
     if (process.env.NODE_ENV === 'development') {
+        console.log('process.env.NODE_ENV === development, loadURL(http://localhost:8080)');
         // Carregar o Vue a partir do servidor de desenvolvimento (localhost:8080 por padrão)
         mainWindow.loadURL('http://localhost:8080');
     }
     else {
-        // Caso contrário, carregue o arquivo gerado pelo Vue (modo de produção)
-        console.log('dir:: ', __dirname + '\\..\\..\\dist\\index.html');
-        mainWindow.loadFile(path_1.default.join(__dirname, '..', '..', 'dist', 'index.html'));
+        // Ajustar o caminho para acessar corretamente a pasta dist dentro do app.asar
+        const indexPath = path_1.default.join(electron_1.app.getAppPath(), '..', '..', '..', 'index.html');
+        console.log('Index Path:', indexPath); // Verifique o caminho no console
+        // Verifique se o caminho existe e se o arquivo está lá
+        mainWindow.loadURL(`file://${indexPath}`).catch((err) => {
+            console.error("Erro ao carregar o arquivo:", err);
+        });
     }
     mainWindow.on('closed', () => {
         mainWindow = null;

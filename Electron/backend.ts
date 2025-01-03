@@ -2,10 +2,13 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import { ReceivedData, ToRemoveItem } from './classes'
+import { app } from 'electron';
 import Database from 'better-sqlite3';
 import path from 'path';
 
-export const db = new Database(path.join(__dirname, '..', 'sqlite', 'money_manager.db'));
+// Diretório de dados do usuário, que funciona tanto em desenvolvimento quanto em produção
+const dbPath = path.join(app.getPath('userData'), 'money_manager.db');
+const db = new Database(dbPath);
 
 // Criação das tabelas, caso ainda não existam
 db.exec(`

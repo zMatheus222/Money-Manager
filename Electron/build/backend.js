@@ -12,16 +12,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.db = void 0;
 exports.startBackend = startBackend;
 const express_1 = __importDefault(require("express"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const cors_1 = __importDefault(require("cors"));
+const electron_1 = require("electron");
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
-exports.db = new better_sqlite3_1.default(path_1.default.join(__dirname, '..', 'sqlite', 'money_manager.db'));
+// Diretório de dados do usuário, que funciona tanto em desenvolvimento quanto em produção
+const dbPath = path_1.default.join(electron_1.app.getPath('userData'), 'money_manager.db');
+const db = new better_sqlite3_1.default(dbPath);
 // Criação das tabelas, caso ainda não existam
-exports.db.exec(`
+db.exec(`
     CREATE TABLE IF NOT EXISTS Rendas (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
@@ -66,7 +68,7 @@ function startBackend(port) {
         }
         try {
             //await client.connect();
-            const stmt = exports.db.prepare(`SELECT * FROM ${table}`);
+            const stmt = db.prepare(`SELECT * FROM ${table}`);
             const queryRes = stmt.all();
             res.json(queryRes);
         }
@@ -98,32 +100,32 @@ function startBackend(port) {
                 convertIsRecurring(item);
             for (const item of receivedData.gastos)
                 convertIsRecurring(item);
-            exports.db.exec('BEGIN TRANSACTION');
+            db.exec('BEGIN TRANSACTION');
             // Caso tenha itens a remover, fazer primeiro
             if (to_remove) {
                 for (const tr of to_remove) {
-                    const stmt = exports.db.prepare(`DELETE FROM ${tr.value} WHERE id = ?`);
+                    const stmt = db.prepare(`DELETE FROM ${tr.value} WHERE id = ?`);
                     stmt.run(tr.key);
                 }
             }
             // inserir economias primeiro para já colocar o id
-            const insertEconomia = exports.db.prepare(`INSERT INTO ECONOMIAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
+            const insertEconomia = db.prepare(`INSERT INTO ECONOMIAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.economias) {
                 insertEconomia.run(item.id, item.nome, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
-            const insertRenda = exports.db.prepare(`INSERT INTO RENDAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
+            const insertRenda = db.prepare(`INSERT INTO RENDAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.rendas) {
                 insertRenda.run(item.id, item.nome, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
-            const insertGasto = exports.db.prepare(`INSERT INTO GASTOS (id, nome, descricao, economia_id, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
+            const insertGasto = db.prepare(`INSERT INTO GASTOS (id, nome, descricao, economia_id, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.gastos) {
                 insertGasto.run(item.id, item.nome, item.descricao, item.economia_id, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
-            exports.db.exec('COMMIT');
+            db.exec('COMMIT');
             res.status(200).json({ message: 'Dados recebidos e inseridos com sucesso' });
         }
         catch (error) {
-            exports.db.exec('ROLLBACK'); // Rollback on error
+            db.exec('ROLLBACK'); // Rollback on error
             console.error('Erro ao processar /receive_data:', error);
             res.status(400).json({ error: '[/receive_data] Erro ao receber / inserir dados ao banco' });
         }

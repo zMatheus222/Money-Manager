@@ -8,14 +8,14 @@ let mainWindow: BrowserWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 720,
     webPreferences: {
       nodeIntegration: true
     }
   });
 
-  mainWindow.webContents.openDevTools();  // Abre as DevTools imediatamente
+  // mainWindow.webContents.openDevTools();  // Abre as DevTools imediatamente
 
   console.log('Environment:', process.env.NODE_ENV);
   

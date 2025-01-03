@@ -38,7 +38,8 @@
     "appId": "money-manager-v0",
     "productName": "Money Manager",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "mm.ico"
     }
   },
   "browserslist": [

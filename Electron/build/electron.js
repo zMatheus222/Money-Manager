@@ -10,13 +10,13 @@ const backend_1 = require("./backend");
 let mainWindow;
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
         webPreferences: {
             nodeIntegration: true
         }
     });
-    mainWindow.webContents.openDevTools(); // Abre as DevTools imediatamente
+    // mainWindow.webContents.openDevTools();  // Abre as DevTools imediatamente
     console.log('Environment:', process.env.NODE_ENV);
     // Carregar o frontend do Vue (a partir da pasta dist)
     if (process.env.NODE_ENV === 'development') {

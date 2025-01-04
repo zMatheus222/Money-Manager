@@ -325,7 +325,6 @@
             
         }
     }
-
     // STYLE FUNCTIONS
 
 
@@ -388,8 +387,8 @@
                     </div>
                     <div class="item-details">
                         <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
-                        <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
-                        <span v-if="item.date_end">Fim: {{ new Date(item.date_end).toLocaleDateString() }}</span>
+                        <span>Início: {{ new Date(`${item.date_start}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
+                        <span v-if="item.date_end">Fim: {{ new Date(`${item.date_end}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
                     </div>
                 </li>
             </ul>
@@ -427,8 +426,8 @@
                     <div class="item-details">
                         <!-- <span v-if="item.id">ID: {{ item.id }}</span> -->
                         <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
-                        <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
-                        <span v-if="item.date_end">Fim: {{ new Date(item.date_end).toLocaleDateString() }}</span>
+                        <span>Início: {{ new Date(`${item.date_start}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
+                        <span v-if="item.date_end">Fim: {{ new Date(`${item.date_end}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
                     </div>
                 </li>
             </ul>
@@ -467,8 +466,8 @@
                         <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
                         <span v-if="item.descricao">Descrição: {{ item.descricao }}</span>
                         <span v-if="item.economia_id">Economia ID: {{ item.economia_id }}</span>
-                        <span>Início: {{ new Date(item.date_start).toLocaleDateString() }}</span>
-                        <span v-if="item.date_end">Fim: {{ new Date(item.date_end).toLocaleDateString() }}</span>
+                        <span>Início: {{ new Date(`${item.date_start}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
+                        <span v-if="item.date_end">Fim: {{ new Date(`${item.date_end}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
                     </div>
                 </li>
             </ul>

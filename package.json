@@ -10,7 +10,6 @@
     "build": "npm run build:vue && npm run build:electron",
     "start:electron": "electron ./Electron/build/electron.js",
     "start": "npm run build && concurrently \"npm run start:electron\"",
-    "postinstall": "npm rebuild better-sqlite3 --runtime=electron --target=$(npx electron --version) --dist-url=https://electronjs.org/headers",
     "dist": "electron-builder"
   },
   "dependencies": {

@@ -2,5 +2,5 @@
 
 ## Para compilar o projeto use
 ```
-npm run build && npm run dist
+npm install && npm run build && npm run dist
 ```

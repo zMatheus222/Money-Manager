@@ -1,15 +1,16 @@
 import { defineStore } from "pinia";
 import { ref } from 'vue';
 import { backend } from "@/assets/plugins/backend";
-import { Renda, Economia, Gasto } from "@/assets/plugins/classes"
+import { Renda, Economia, Gasto, Saldo } from "@/assets/plugins/classes"
 
 export const useBaseStore = defineStore('base', () => {
 
     const Rendas = ref<Renda[]>([]);
     const Economias = ref<Economia[]>([]);
     const Gastos = ref<Gasto[]>([]);
+    const Saldos = ref<Saldo[]>([]);
 
-    async function fetchData(table: 'Rendas' | 'Economias' | 'Gastos') {
+    async function fetchData(table: 'Rendas' | 'Economias' | 'Gastos' | 'Saldos') {
         try {
             const response = await backend.get(`/get_data?table=${table}`);
             console.log('[fetchData] response: ', response);
@@ -22,6 +23,9 @@ export const useBaseStore = defineStore('base', () => {
                     break;
                 case "Gastos":
                     Gastos.value = response.data;
+                    break;
+                case "Saldos":
+                    Saldos.value = response.data;
                     break;
                 default:
                     console.error(`[fetchData] Erro ao tentar fazer o fetch na tabela: ${table}`);
@@ -38,11 +42,13 @@ export const useBaseStore = defineStore('base', () => {
                 fetchData("Rendas"),
                 fetchData("Economias"),
                 fetchData("Gastos"),
+                fetchData("Saldos"),
             ]);
 
             console.log(`Rendas: `, Rendas.value);
             console.log(`Economias: `, Economias.value);
             console.log(`Gastos: `, Gastos.value);
+            console.log(`Saldo: `, Saldos.value);
         } catch (error) {
             console.error('[initializeStore] Erro durante a atualização do Storage:', error);
         } finally {
@@ -55,7 +61,8 @@ export const useBaseStore = defineStore('base', () => {
         fetchData,
         Rendas,
         Economias,
-        Gastos
+        Gastos,
+        Saldos
     }
 
 });

@@ -20,7 +20,7 @@ const electron_1 = require("electron");
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
 // Diretório de dados do usuário, que funciona tanto em desenvolvimento quanto em produção
-const dbPath = path_1.default.join(electron_1.app.getPath('userData'), 'money_manager.db');
+const dbPath = path_1.default.join(electron_1.app.getPath('userData'), 'money_manager_v0.1.db');
 const db = new better_sqlite3_1.default(dbPath);
 // Criação das tabelas, caso ainda não existam
 db.exec(`
@@ -46,11 +46,18 @@ db.exec(`
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
         descricao TEXT,
-        economia_id TEXT REFERENCES Economias(id),
+        usar_saldo BOOLEAN NOT NULL DEFAULT 0,
         valor REAL NOT NULL,
         is_recurring BOOLEAN NOT NULL DEFAULT 0,
         date_start DATE,
         date_end DATE
+    );
+
+    CREATE TABLE IF NOT EXISTS Saldos (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        descricao TEXT,
+        valor REAL NOT NULL
     );
 `);
 function startBackend(port) {
@@ -62,7 +69,7 @@ function startBackend(port) {
         const table = req.query.table;
         console.log(`[/get_data] table recebida ${table}`);
         // Whitelist of allowed tables
-        const allowedTables = ['Rendas', 'Gastos', 'Economias'];
+        const allowedTables = ['Rendas', 'Gastos', 'Economias', 'Saldos'];
         if (!allowedTables.includes(table)) {
             return res.status(400).json({ error: 'Invalid table name' });
         }
@@ -88,10 +95,15 @@ function startBackend(port) {
             else {
                 console.log(`[/receive_data] data is ok`);
             }
-            console.log(`[/receive_data] itens a serem atualizados: receivedData: `, receivedData);
+            console.log(`[/receive_data] items to be updated, receivedData: `, receivedData);
             // Converter is_recurring para 1 ou 0
             const convertIsRecurring = (item) => {
-                item.is_recurring = item.is_recurring ? 1 : 0;
+                if ('is_recurring' in item) {
+                    item.is_recurring = item.is_recurring ? 1 : 0;
+                }
+                if ('usar_saldo' in item) {
+                    item.usar_saldo = item.usar_saldo ? 1 : 0;
+                }
             };
             // Aplicar a conversão em rendas, economias e gastos
             for (const item of receivedData.rendas)
@@ -99,6 +111,8 @@ function startBackend(port) {
             for (const item of receivedData.economias)
                 convertIsRecurring(item);
             for (const item of receivedData.gastos)
+                convertIsRecurring(item);
+            for (const item of receivedData.saldos)
                 convertIsRecurring(item);
             db.exec('BEGIN TRANSACTION');
             // Caso tenha itens a remover, fazer primeiro
@@ -108,19 +122,28 @@ function startBackend(port) {
                     stmt.run(tr.key);
                 }
             }
-            // inserir economias primeiro para já colocar o id
+            console.groupCollapsed('/receive_data Inserts');
             const insertEconomia = db.prepare(`INSERT INTO ECONOMIAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.economias) {
+                console.log(`[/receive_data] insertEconomia Query: INSERT INTO ECONOMIAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (${item.id}, '${item.nome}', ${item.valor}, ${item.is_recurring}, '${item.date_start}', '${item.date_end}') ON CONFLICT (id) DO NOTHING;`);
                 insertEconomia.run(item.id, item.nome, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
             const insertRenda = db.prepare(`INSERT INTO RENDAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.rendas) {
+                console.log(`[/receive_data] insertRenda Query: INSERT INTO RENDAS (id, nome, valor, is_recurring, date_start, date_end) VALUES (${item.id}, '${item.nome}', ${item.valor}, ${item.is_recurring}, '${item.date_start}', '${item.date_end}') ON CONFLICT (id) DO NOTHING;`);
                 insertRenda.run(item.id, item.nome, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
-            const insertGasto = db.prepare(`INSERT INTO GASTOS (id, nome, descricao, economia_id, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
+            const insertGasto = db.prepare(`INSERT INTO GASTOS (id, nome, descricao, usar_saldo, valor, is_recurring, date_start, date_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
             for (const item of receivedData.gastos) {
-                insertGasto.run(item.id, item.nome, item.descricao, item.economia_id, item.valor, item.is_recurring, item.date_start, item.date_end);
+                console.log(`[/receive_data] insertGasto Query: INSERT INTO GASTOS (id, nome, descricao, usar_saldo, valor, is_recurring, date_start, date_end) VALUES (${item.id}, '${item.nome}', '${item.descricao}', ${item.usar_saldo}, ${item.valor}, ${item.is_recurring}, '${item.date_start}', '${item.date_end}') ON CONFLICT (id) DO NOTHING;`);
+                insertGasto.run(item.id, item.nome, item.descricao, item.usar_saldo, item.valor, item.is_recurring, item.date_start, item.date_end);
             }
+            const insertSaldo = db.prepare(`INSERT INTO SALDOS (id, nome, descricao, valor) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;`);
+            for (const item of receivedData.saldos) {
+                console.log(`[/receive_data] insertSaldo Query: INSERT INTO SALDOS (id, nome, descricao, valor) VALUES (${item.id}, '${item.nome}', '${item.descricao}', ${item.valor}) ON CONFLICT (id) DO NOTHING;`);
+                insertSaldo.run(item.id, item.nome, item.descricao, item.valor);
+            }
+            console.groupEnd();
             db.exec('COMMIT');
             res.status(200).json({ message: 'Dados recebidos e inseridos com sucesso' });
         }

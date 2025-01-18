@@ -1,6 +1,8 @@
 //type Month = 'janeiro' | 'fevereiro' | 'marco' | 'abril' | 'maio' | 'junho' | 'julho' | 'agosto' | 'setembro' | 'outubro' | 'novembro' | 'dezembro';
 //const meses: Month[] = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
+export type MoneyDataType = 'Rendas' | 'Economias' | 'Gastos' | 'Saldo';
+
 export class Projecao {
     Rendas: Renda[] = [];
     Economias: Economia[] = [];
@@ -137,21 +139,30 @@ export interface Gasto {
     id: string | undefined,
     nome: string;
     descricao: string,
-    economia_id?: number,
+    usar_saldo: boolean,
     valor: number
     is_recurring: number,
     date_start: Date,
     date_end: Date | null
 }
 
+export interface Saldo {
+    id: string | undefined,
+    nome: string,
+    descricao: string,
+    valor: number
+}
+
 export interface ReceivedData {
     rendas: Renda[];
     economias: Economia[];
     gastos: Gasto[];
+    saldos: Saldo[];
     to_remove: ToRemoveItem[];
 }
 
+
 export interface ToRemoveItem {
     key: string;
-    value: 'RENDAS' | 'ECONOMIAS' | 'GASTOS';
+    value: 'Rendas' | 'Economias' | 'Gastos' | 'Saldo';
 }

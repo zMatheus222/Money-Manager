@@ -1,9 +1,10 @@
 <script setup lang="ts">
     import { computed, ref } from 'vue';
-    import type { Renda, Economia, Gasto, ReceivedData } from '@/assets/plugins/classes';
+    import type { Renda, Economia, Gasto, Saldo, ReceivedData } from '@/assets/plugins/classes';
     import { backend } from '@/assets/plugins/backend';
 
     import { useBaseStore } from '@/stores/BaseStore'
+
     const baseStore = useBaseStore();
 
     function generateId() {
@@ -54,17 +55,42 @@
         id: undefined,
         nome: '',
         descricao: '',
-        economia_id: undefined,
+        usar_saldo: false,
         valor: 0,
         is_recurring: 0,
         date_start: new Date(),
         date_end: null,
     });
 
+    const saldo = ref<Saldo>({
+        id: undefined,
+        nome: '',
+        descricao: '',
+        valor: 0
+    });
+
     const Projecao = ref<Map<string, number>>(new Map());
     const rendas = computed<Renda[]>(() => baseStore.Rendas);
     const economias = computed<Economia[]>(() => baseStore.Economias);
     const gastos = computed<Gasto[]>(() => baseStore.Gastos);
+    const saldos = computed<Saldo[]>(() => baseStore.Saldos);
+    const saldoTotal = computed<number>(() => {
+
+        let finalValue: number = 0;
+        // somar todos os saldos
+        saldos.value.map(saldo => {
+            finalValue += saldo.valor;
+        });
+
+        // debitar do saldo todos os gastos que usam o saldo
+        gastos.value.filter(saldo => {
+            console.log('verificando se saldo.usar_saldo === true', saldo.usar_saldo);
+            if (saldo.usar_saldo === true) {
+                finalValue -= saldo.valor;
+            }
+        });
+        return finalValue;
+    });
 
     // mapa que contem o 'tipo_item' 'id', exemplo: <'id'>: 'rendas'
     const ToRemoveItens = ref<Map<string, string>>(new Map());
@@ -124,52 +150,56 @@
                 rendas: rendas.value,
                 economias: economias.value,
                 gastos: gastos.value,
+                saldos: saldos.value,
                 to_remove: Array.from(ToRemoveItens.value, ([key, value]) => ({
                     key,
-                    value: value as 'RENDAS' | 'ECONOMIAS' | 'GASTOS',
+                    value: value as 'Rendas' | 'Economias' | 'Gastos' | 'Saldo',
                 })),
             }
 
-            if (DataToSend.rendas.length === 0 && DataToSend.economias.length === 0 && DataToSend.gastos.length === 0 && DataToSend.to_remove.length === 0) {
+            if (DataToSend.rendas.length === 0 && DataToSend.economias.length === 0 && DataToSend.saldos.length === 0 && DataToSend.gastos.length === 0 && DataToSend.to_remove.length === 0) {
                 console.warn('[SendToDatabase] Nenhum dado novo para enviar.');
                 return;
             } else {
-                console.log(`[SendToDatabase] Dados a enviar: ${DataToSend.rendas.length} ${DataToSend.economias.length} ${DataToSend.gastos.length}`);
+                console.log(`[SendToDatabase] Tamanho dos dados - rendas: ${DataToSend.rendas.length} economia: ${DataToSend.economias.length} gastos: ${DataToSend.gastos.length} saldos: ${DataToSend.saldos.length}`);
+                console.log(`[SendToDatabase] Dados JSON a enviar: `, DataToSend);
             }
             
             const res = await backend.post('/receive_data', DataToSend, { headers: { 'Content-Type': 'application/json' } });
             if (res.status === 200) {
                 console.log(`[SendToDatabase] Dados enviados e inseridos com sucesso`);
                 ToRemoveItens.value.clear();
-                await Promise.all([baseStore.fetchData("Rendas"), baseStore.fetchData("Economias"), baseStore.fetchData("Gastos")]);
+                await Promise.all([baseStore.fetchData("Rendas"), baseStore.fetchData("Economias"), baseStore.fetchData("Gastos"), baseStore.fetchData("Saldos")]);
             } else {
                 console.error(`Erro ao receber / inserir os dados`);
             }
             
         } catch (error) {
-            console.log(`Excessão ao tentar enviar os dados ao banco: `, error);
+            console.error(`[SendToDatabase] Excessão ao tentar enviar os dados ao banco: `, error);
         } finally {
             console.log('[SendToDatabase] Processo finalizado.');
         }
 
     }
 
-    function removeItem(tipo: 'renda' | 'economia' | 'gasto', item_id: string) {
+    function removeItem(tipo: 'renda' | 'economia' | 'gasto' | 'saldo', item_id: string) {
 
         console.log(`[removeItem] Removendo item do tipo ${tipo} id: ${item_id}`);
 
         if (tipo === 'renda') {
-            baseStore.Rendas = baseStore.Rendas.filter(item => item.id != item_id);
+            baseStore.Rendas = baseStore.Rendas.filter((item: Renda) => item.id != item_id);
         } else if (tipo === 'economia') {
-            baseStore.Economias = baseStore.Economias.filter(item => item.id != item_id);
+            baseStore.Economias = baseStore.Economias.filter((item: Economia) => item.id != item_id);
         } else if (tipo === 'gasto') {
-            baseStore.Gastos = baseStore.Gastos.filter(item => item.id != item_id);
+            baseStore.Gastos = baseStore.Gastos.filter((item: Gasto) => item.id != item_id);
+        } else if (tipo === 'saldo') {
+            baseStore.Saldos = baseStore.Saldos.filter((item: Saldo) => item.id != item_id);
         } else {
             console.error(`[removeItem] Erro ao tentar excluir um item tipo: ${tipo} | id: ${item_id}`);
             return;
         }
 
-        ToRemoveItens.value.set(item_id, tipo === 'renda' ? 'RENDAS' : tipo === 'economia' ? 'ECONOMIAS' : tipo === 'gasto' ? 'GASTOS' : 'UNDEFINED TABLE');
+        ToRemoveItens.value.set(item_id, tipo === 'renda' ? 'RENDAS' : tipo === 'economia' ? 'ECONOMIAS' : tipo === 'gasto' ? 'GASTOS' : tipo === 'saldo' ? 'SALDOS' : 'UNDEFINED TABLE');
 
     };
 
@@ -193,8 +223,16 @@
         const newGasto = { ...gasto.value, id: generateId() };
         gastos.value.push(newGasto);
         console.log('Added new gasto:', newGasto);
-        gasto.value = { id: undefined, nome: '', descricao: '', economia_id: undefined, valor: 0, is_recurring: 0, date_start: new Date(), date_end: null };
+        gasto.value = { id: undefined, nome: '', descricao: '', usar_saldo: false, valor: 0, is_recurring: 0, date_start: new Date(), date_end: null };
         menus.value.set('adicionar_gasto', false);
+    };
+
+    const addSaldo = () => {
+        const newSaldo: Saldo = { ...saldo.value, id: generateId() };
+        saldos.value.push(newSaldo);
+        console.log('Added new saldo:', newSaldo);
+        saldo.value = { id: undefined, nome: '', descricao: '', valor: 0 };
+        menus.value.set('adicionar_saldo', false);
     };
     
     async function PickMesesAno(startDate: Date): Promise<Date[]> {
@@ -269,7 +307,6 @@
             // nome do mes
             const mes = ActualDate.toLocaleString('default', { month: 'long' }).toLowerCase();
 
-
             console.log(`Mês atual: ${mes}`);
 
             let gastoDoMes: number = 0;
@@ -280,12 +317,15 @@
                 
                 if (isYearMonthBeforeOrEqual(gastoStartDate, ActualDate) && 
                     (!gastoEndDate || isYearMonthBeforeOrEqual(ActualDate, gastoEndDate))) {
-                    if (gasto.is_recurring == 1) {
+                    if (gasto.is_recurring == 1 && !gasto.usar_saldo) {
                         console.log(`\tSomando gasto recorrente: ${gasto.nome} ao mes: ${mes}`);
                         gastoDoMes = roundToTwo(gastoDoMes + gastoValor);
-                    } else if (isSameYearAndMonth(gastoStartDate, ActualDate)) {
+                    } else if (isSameYearAndMonth(gastoStartDate, ActualDate) && !gasto.usar_saldo) {
                         console.log(`\tSomando gasto não - recorrente: ${gasto.nome} ao mes: ${mes}`);
                         gastoDoMes = roundToTwo(gastoDoMes + gastoValor);
+                    } else {
+                        console.log(`for (const ActualDate of nextTwelveDates) continue...`);
+                        continue;
                     }
                 } else {
                     console.warn(`\tSkippando gasto: ${gasto.nome} ao mes: ${mes} :: gastoStartDate: ${gastoStartDate.toISOString().substr(0, 7)} || ActualDate: ${ActualDate.toISOString().substr(0, 7)}`);
@@ -369,6 +409,37 @@
                     <div class="projection-value" :class="getValueClass(value)">R$ {{ value.toFixed(2) }}</div>
                 </div>
             </div>
+        </div>
+
+        <div class="projection-section">
+            <h2>Saldo</h2>
+            <a v-if="saldoTotal >= 0" style="font-size: 35px; color: greenyellow;">Total R$ {{ saldoTotal }}</a>
+            <a v-else style="font-size: 35px; color: red;">Saldo Negativo R$ {{ saldoTotal }}</a>
+            <button class="toggle-button" style="margin-left: 25px" @click="menus.set('adicionar_saldo', !menus.get('adicionar_saldo'))">
+                {{ menus.get('adicionar_saldo') ? 'Fechar ❌' : 'Novo ✳️' }}
+            </button>
+            <ul class="item-list">
+                <li v-for="(item, index) in saldos" :key="index" class="item">
+                    <div class="item-header">
+                        <span class="item-name">{{ item.nome }}</span>
+                        <span class="item-value">R$ {{ Number(item.valor).toFixed(2) }}</span>
+                        <div @click="removeItem('saldo', item.id ?? 'invalid id')" class="remove-button">X</div>
+                    </div>
+                    <div class="item-details">
+                        <span>Descricao: {{ item.descricao }}</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="form-section" v-if="menus.get('adicionar_saldo')">
+            <h3>Adicionar Saldo</h3>
+            <form @submit.prevent="addSaldo" class="add-form">
+                <input v-model="saldo.nome" placeholder="Nome" required>
+                <textarea v-model="saldo.descricao" placeholder="Descrição"></textarea>
+                <input v-model="saldo.valor" type="number" step="0.01" placeholder="Valor" required>
+                <button type="submit" class="submit-button">Adicionar Saldo</button>
+            </form>
         </div>
 
         <div class="section">
@@ -465,7 +536,7 @@
                     <div class="item-details">
                         <span>Recorrente: {{ item.is_recurring == 1 ? 'Sim - ' : 'Não - ' }}</span>
                         <span v-if="item.descricao">Descrição: {{ item.descricao }}</span>
-                        <span v-if="item.economia_id">Economia ID: {{ item.economia_id }}</span>
+                        <span v-if="item.usar_saldo">Usar Saldo: {{ item.usar_saldo }}</span>
                         <span>Início: {{ new Date(`${item.date_start}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
                         <span v-if="item.date_end">Fim: {{ new Date(`${item.date_end}T00:00:00-03:00`).toLocaleDateString("pt-BR") }}</span>
                     </div>
@@ -478,14 +549,12 @@
             <form @submit.prevent="addGasto" class="add-form">
                 <input v-model="gasto.nome" placeholder="Nome" required>
                 <textarea v-model="gasto.descricao" placeholder="Descrição"></textarea>
-                <select v-model="gasto.economia_id">
-                    <option :value="undefined">Selecione uma Economia (opcional)</option>
-                    <option v-for="economia in economias" :key="economia.id" :value="economia.id">
-                        {{ economia.nome }} (ID: {{ economia.id }})
-                    </option>
-                </select>
                 <input v-model.number="gasto.valor" type="number" step="0.01" placeholder="Valor" required>
-                <div class="checkbox-group">
+                <div v-if="!gasto.is_recurring" class="checkbox-group">
+                    <input v-model.number="gasto.usar_saldo" type="checkbox" id="usar-saldo">
+                    <label for="usar-saldo">Usar Saldo</label>
+                </div>
+                <div v-if="!gasto.usar_saldo" class="checkbox-group">
                     <input v-model.number="gasto.is_recurring" type="checkbox" id="gasto-recurring">
                     <label for="gasto-recurring">Recorrente</label>
                 </div>
